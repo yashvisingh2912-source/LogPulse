@@ -9,4 +9,4 @@ class App(Base):
     name=Column(String,nullable=False,index=True,unique=True)
     api_key=Column(String,nullable=False,unique=True,index=True)
     owner_id=Column(Integer,ForeignKey("users.id"),nullable=False)
-    created_At=Column(DateTime(timezone=True),server_default=func.now())
+    created_At=Column(DateTime(timezone=True),server_default=func.now(),nullable=False)

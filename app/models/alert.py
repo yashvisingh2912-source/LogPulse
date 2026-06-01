@@ -10,7 +10,7 @@ class AlertRule(Base):
     app_id=Column(Integer,ForeignKey("apps.id"),nullable=False)
     level=Column(String,nullable  = False)
     threshold=Column(Integer,nullable  = False)
-    window=Column(Integer,nullable  = False)
+    window_secs=Column(Integer,nullable  = False)
     webhook_url=Column(String,nullable  = False)
     is_active=Column(Boolean,default=True)
     created_at=Column(DateTime(timezone=True),default=lambda:datetime.now(timezone.utc))

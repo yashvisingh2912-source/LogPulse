@@ -6,8 +6,11 @@ from app.database import get_db
 from app.models.user import User
 from app.models.app import App
 from app.models.log import Log
+from app.models.alert import AlertRule
 from app.services.auth_service import get_current_user
 from typing import Optional
+from app.services.log_services import increment_log_counter
+import asyncio
 
 router = APIRouter(prefix="/logs",tags=["logs"])
 
@@ -18,21 +21,32 @@ def get_app_by_api_key(x_api_key:str=Header(...),db:Session=Depends(get_db)):
     return app
 
 @router.post("/",response_model=LogOut,status_code=201)
-def ingest_log(
+async def ingest_log(
     log_data:LogCreate,
     app:App=Depends(get_app_by_api_key),
     db:Session=Depends(get_db)
 ):
-    log = Log(
+    #save log to db
+    db_log = Log(
         app_id=app.id,
         level=log_data.level,
         message=log_data.message,
         source=log_data.source
     )
-    db.add(log)
+    db.add(db_log)
     db.commit()
-    db.refresh(log)
-    return log
+    db.refresh(db_log)
+
+    #find matching alert rule and increse redis counter
+    rules = db.query(AlertRule).filter(
+        AlertRule.app_id==app.id,
+        AlertRule.level==log_data.level.upper(),
+        AlertRule.is_active==True
+    ).all()
+    print("Rules found:", len(rules))
+    for rule in rules:
+        await increment_log_counter(app.id,log_data.level,rule.window_secs)
+    return db_log
 
 @router.get("/",response_model=LogListResponse)
 def get_logs(
@@ -45,9 +59,9 @@ def get_logs(
 ):
     query = db.query(Log).filter(Log.app_id==app.id)
     if level:
-        query = db.query(Log).filter(Log.level==level)
+        query = db.query().filter(Log.level==level)
     if source:
-        query = db.query(Log).filter(Log.level==source)
+        query = db.query().filter(Log.source==source)
     total=query.count()
     logs = query.order_by(Log.created_at.desc()).offset((page-1)*page_size).limit(page_size).all()
     return {

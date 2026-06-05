@@ -31,4 +31,4 @@ def register_app(
 @router.get("/",response_model=list[AppOut])
 def list_apps(db:Session = Depends(get_db),
               current_user:User=Depends(get_current_user)):
-    return db.query(App).filter(App.owner_id==current_user.id).all
+    return db.query(App).filter(App.owner_id==current_user.id).all()

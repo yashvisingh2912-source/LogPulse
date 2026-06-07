@@ -43,10 +43,12 @@ async def ingest_log(
         AlertRule.level==log_data.level.upper(),
         AlertRule.is_active==True
     ).all()
-    print("Rules found:", len(rules))
+
     for rule in rules:
-        await increment_log_counter(app.id,log_data.level,rule.window_secs)
+        await increment_log_counter(app.id, log_data.level, rule.window_secs)
+
     return db_log
+
 
 @router.get("/",response_model=LogListResponse)
 def get_logs(

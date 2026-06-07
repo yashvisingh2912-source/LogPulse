@@ -13,6 +13,7 @@ def create_alert_rule(rule:AlertRuleCreate,
                       db:Session=Depends(get_db),
                       current_user=Depends(get_current_user)):
     db_rule = AlertRule(**rule.model_dump())
+    db_rule.level=db_rule.level.upper()
     db.add(db_rule)
     db.commit()
     db.refresh(db_rule)

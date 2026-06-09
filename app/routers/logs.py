@@ -9,7 +9,7 @@ from app.models.log import Log
 from app.models.alert import AlertRule
 from app.services.auth_service import get_current_user
 from typing import Optional
-from app.services.log_services import increment_log_counter
+from app.services.log_services import increment_log_counter,publish_log
 import asyncio
 
 router = APIRouter(prefix="/logs",tags=["logs"])
@@ -37,6 +37,15 @@ async def ingest_log(
     db.commit()
     db.refresh(db_log)
 
+    await publish_log(app_id=app.id,
+                      log_data={
+                          "id":db_log.id,
+                          "app_id":db_log.app_id,
+                          "level":db_log.level,
+                          "message":db_log.message,
+                          "created_at":db_log.created_at
+                      })
+
     #find matching alert rule and increse redis counter
     rules = db.query(AlertRule).filter(
         AlertRule.app_id==app.id,
@@ -61,9 +70,9 @@ def get_logs(
 ):
     query = db.query(Log).filter(Log.app_id==app.id)
     if level:
-        query = db.query().filter(Log.level==level)
+        query = query.filter(Log.level==level)
     if source:
-        query = db.query().filter(Log.source==source)
+        query = query.filter(Log.source==source)
     total=query.count()
     logs = query.order_by(Log.created_at.desc()).offset((page-1)*page_size).limit(page_size).all()
     return {
